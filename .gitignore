@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Maps folder (user content, not tracked)
+Maps/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
