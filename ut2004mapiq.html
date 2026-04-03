@@ -75,7 +75,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 
 /* Zoom */
-.zoom-bar{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:3px;z-index:5}
+.zoom-bar{position:absolute;top:38px;right:10px;display:flex;flex-direction:column;gap:3px;z-index:5}
 .zbtn{width:24px;height:24px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:'Share Tech Mono',monospace}
 .zbtn:hover{border-color:var(--accent);color:var(--accent)}
 
@@ -169,7 +169,7 @@ body.drag-over .canvas-wrap{outline:2px dashed var(--accent);outline-offset:-6px
   <input type="file" id="folder-input" webkitdirectory multiple style="display:none">
   <button class="btn" onclick="triggerImport()">📂 Import OBJ</button>
   <button class="btn" onclick="triggerFolderImport()" title="Select a folder containing .obj + texture subfolders">📁 Import Folder</button>
-  <button class="btn" id="btn-mapbrowser" onclick="openMapBrowser()" title="Browse maps from the server Maps/ folder">🗂 Maps</button>
+  <button class="btn" id="btn-mapbrowser" onclick="openMapBrowser()" title="Browse maps from the server maps/ folder">🗂 Maps</button>
 
   <div class="sep"></div>
   <button class="btn active" id="btn-grid"   onclick="toggleGrid()">⊞ Grid</button>
@@ -233,7 +233,11 @@ body.drag-over .canvas-wrap{outline:2px dashed var(--accent);outline-offset:-6px
           Drop <code>.obj</code> + textures here, use <strong style="color:var(--accent)">📂 Import OBJ</strong> for files,<br>
           or <strong style="color:var(--accent)">📁 Import Folder</strong> for an entire export folder<br>
           Export from UT2004 via <code>UnrealEd → File → Export</code><br>
-          Or convert with <strong style="color:var(--accent)">🔧 .ut2→OBJ</strong> (umodel guide)
+          Or convert with <strong style="color:var(--accent)">🔧 .ut2→OBJ</strong> (umodel guide)<br>
+          <a href="http://hitscan.site.nfoservers.com/maps/" target="_blank" rel="noopener"
+             style="color:var(--accent2);text-decoration:underline;font-size:9px">
+            ⬇ Download already exported maps
+          </a>
         </div>
         <!-- FIX 1: demo button explicitly calls loadDemo, not triggerImport -->
         <div class="drop-btns">
@@ -407,16 +411,16 @@ body.drag-over .canvas-wrap{outline:2px dashed var(--accent);outline-offset:-6px
   <div class="modal" style="max-width:540px;max-height:80vh;display:flex;flex-direction:column">
     <button class="modal-close" onclick="closeMapBrowser()">✕</button>
     <div class="modal-title">🗂 SERVER MAPS</div>
-    <div style="font-size:9px;color:var(--text-dim);margin-bottom:8px;letter-spacing:1px">
-      Maps found in the <code>Maps/</code> folder on the server
+    <div id="mb-breadcrumb" style="font-size:9px;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px;display:flex;align-items:center;gap:6px">
+      <span style="color:var(--accent2)">maps/</span>
     </div>
     <div id="mb-status" style="font-size:10px;color:var(--accent);margin-bottom:8px"></div>
     <div id="mb-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;min-height:80px">
       <div style="color:var(--text-dim);font-size:10px">Loading…</div>
     </div>
     <div style="margin-top:12px;font-size:8px;color:var(--text-dim)">
-      Place map folders in <code>Maps/</code> alongside this file. Each folder needs a <code>.obj</code> file.<br>
-      Textures are loaded automatically from subfolders.
+      Subfolders in <code>maps/</code> are treated as gamemode categories (CTF, DM, ONS…)<br>
+      Place map folders inside them. Each map folder needs a <code>.obj</code> file.
     </div>
   </div>
 </div>
@@ -1203,7 +1207,14 @@ function toggleToolbox(){
   if(!show){setTool(null);dstate.drawing=false;}
 }
 function toggleUmodel(){document.getElementById('um-modal').classList.toggle('show');}
-function zoom(f){ST.scale*=f;reqR();}
+function zoom(f){
+  if(ST.viewMode==='3d'){
+    gl3d.zoom=Math.max(0.05,Math.min(20,gl3d.zoom*f));
+    gl3d_render();
+  }else{
+    ST.scale*=f;reqR();
+  }
+}
 
 // ═══════════════════════
 //  LOAD MAP
@@ -2574,40 +2585,82 @@ function closeMapBrowser(){
   document.getElementById('mb-modal').classList.remove('show');
 }
 
-async function fetchMapList(){
+function mbSetBreadcrumb(category){
+  const bc=document.getElementById('mb-breadcrumb');
+  if(category){
+    bc.innerHTML=`
+      <span style="color:var(--text-dim);cursor:pointer;text-decoration:underline"
+            onclick="fetchMapList()">maps/</span>
+      <span style="color:var(--text-dim)">›</span>
+      <span style="color:var(--accent2)">${category}/</span>`;
+  }else{
+    bc.innerHTML=`<span style="color:var(--accent2)">maps/</span>`;
+  }
+}
+
+function mbMakeRow(icon, title, sub, btnLabel, btnCls, onClick){
+  const item=document.createElement('div');
+  item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:rgba(0,150,200,0.07);border:1px solid var(--border);padding:8px 10px;cursor:pointer;border-radius:2px;gap:10px;transition:background .15s';
+  item.onmouseenter=()=>item.style.background='rgba(0,150,200,0.18)';
+  item.onmouseleave=()=>item.style.background='rgba(0,150,200,0.07)';
+  item.innerHTML=`
+    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px">
+      <span style="font-size:14px;line-height:1">${icon}</span>
+      <div>
+        <div style="font-size:11px;color:var(--accent);font-weight:600;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+        <div style="font-size:8px;color:var(--text-dim);margin-top:2px">${sub}</div>
+      </div>
+    </div>
+    <button class="btn ${btnCls}" style="font-size:9px;padding:4px 10px;white-space:nowrap">${btnLabel}</button>`;
+  item.querySelector('button').onclick=e=>{e.stopPropagation();onClick();};
+  item.onclick=onClick;
+  return item;
+}
+
+async function fetchMapList(category){
   const list=document.getElementById('mb-list');
   const status=document.getElementById('mb-status');
   list.innerHTML='<div style="color:var(--text-dim);font-size:10px">Loading…</div>';
   status.textContent='';
+  mbSetBreadcrumb(category||null);
   try{
-    const res=await fetch('maps.php',{cache:'no-cache'});
+    const url=category?`maps.php?category=${encodeURIComponent(category)}`:'maps.php';
+    const res=await fetch(url,{cache:'no-cache'});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
-    if(data.error){ status.textContent='⚠ '+data.error; list.innerHTML=''; return; }
-    const maps=data.maps||[];
-    if(!maps.length){
-      list.innerHTML='<div style="color:var(--text-dim);font-size:10px">No maps found in Maps/ folder.</div>';
-      return;
-    }
-    status.textContent=`${maps.length} map${maps.length!==1?'s':''} available`;
+    if(data.error){status.textContent='⚠ '+data.error;list.innerHTML='';return;}
     list.innerHTML='';
-    for(const m of maps){
-      const item=document.createElement('div');
-      item.style.cssText='display:flex;align-items:center;justify-content:space-between;background:rgba(0,150,200,0.07);border:1px solid var(--border);padding:8px 10px;cursor:pointer;border-radius:2px;gap:10px;transition:background .15s';
-      item.onmouseenter=()=>item.style.background='rgba(0,150,200,0.18)';
-      item.onmouseleave=()=>item.style.background='rgba(0,150,200,0.07)';
-      item.innerHTML=`
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:var(--accent);font-weight:600;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
-          <div style="font-size:8px;color:var(--text-dim);margin-top:2px">${m.textures} texture file${m.textures!==1?'s':''}</div>
-        </div>
-        <button class="btn gb" style="font-size:9px;padding:4px 10px;white-space:nowrap">▶ Load</button>`;
-      item.querySelector('button').onclick=(e)=>{
-        e.stopPropagation();
-        loadMapFromServer(m);
-      };
-      item.onclick=()=>loadMapFromServer(m);
-      list.appendChild(item);
+
+    if(!category){
+      // ── Root level: show categories first, then any root-level maps ──
+      const cats=data.categories||[];
+      const maps=data.maps||[];
+      const total=cats.reduce((s,c)=>s+c.count,0)+maps.length;
+      status.textContent=total?`${cats.length} gamemode${cats.length!==1?'s':''}${maps.length?`, ${maps.length} uncategorised map${maps.length!==1?'s':''}`:''}`:'No maps found';
+
+      if(!cats.length&&!maps.length){
+        list.innerHTML='<div style="color:var(--text-dim);font-size:10px">No maps found in maps/ folder.</div>';
+        return;
+      }
+      // Category rows
+      for(const cat of cats){
+        list.appendChild(mbMakeRow('📁',cat.name,`${cat.count} map${cat.count!==1?'s':''}${''}`, '▶ Open','',()=>fetchMapList(cat.name)));
+      }
+      // Root maps (no category)
+      for(const m of maps){
+        list.appendChild(mbMakeRow('🗺',m.name,`${m.textures} texture${m.textures!==1?'s':''}${''}`, '▶ Load','gb',()=>loadMapFromServer(m)));
+      }
+    }else{
+      // ── Category level: show maps inside this category ──
+      const maps=data.maps||[];
+      status.textContent=maps.length?`${maps.length} map${maps.length!==1?'s':''} in ${category}`:`No maps found in ${category}`;
+      if(!maps.length){
+        list.innerHTML=`<div style="color:var(--text-dim);font-size:10px">No maps found in maps/${category}/</div>`;
+        return;
+      }
+      for(const m of maps){
+        list.appendChild(mbMakeRow('🗺',m.name,`${m.textures} texture${m.textures!==1?'s':''}${''}`, '▶ Load','gb',()=>loadMapFromServer(m)));
+      }
     }
   }catch(e){
     status.textContent='';
