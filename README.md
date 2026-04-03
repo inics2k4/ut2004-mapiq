@@ -63,11 +63,9 @@ Requires **PHP 7+**. Click **🗂 Maps** to browse available maps.
 ### Textures
 **UnrealEd Texture Browser:**
 1. `View → Texture Browser`
-2. Load each texture package, then `File → Export All`
+2. Tick all boxes under "In Use Filter" `File → Export All in Use`
+3. Make sure the export target is the same folder as the .obj file
 
-**UEViewer (recommended):**
-1. Download [UEViewer](https://www.gildor.org/en/projects/umodel)
-2. Open a `.utx` package → `Tools → Export All` (exports `.tga` / `.dds`)
 
 ### Importing with Textures
 Use **📁 Import Folder** — the viewer matches material names to texture filenames automatically.
