@@ -1,6 +1,7 @@
 # UT2004 MapIQ — Map Strategy Tool
 
-A browser-based map viewer and strategy tool for **Unreal Tournament 2004** maps.
+- A browser-based map viewer and strategy tool for **Unreal Tournament 2004** maps.
+- Check it out in action here: https://hitscan.pro/ut2004mapiq.html
 
 ![UT2004 MapIQ](https://img.shields.io/badge/UT2004-MapIQ-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
@@ -107,8 +108,8 @@ All decoding happens in the browser — no server processing needed.
 
 ## Credits
 
-Built by **inics** — © 2026 MapIQ
-
+Built by **inics** with Claude — © 2026 MapIQ 
+- https://hitscan.pro/
 ---
 
 ## License
